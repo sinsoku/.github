@@ -1,0 +1,38 @@
+name: Terraform Cloud Log
+
+on: status
+
+jobs:
+  run:
+    if: ${{ github.event.state != 'pending' && startsWith(github.event.context, 'Terraform Cloud') && github.event.target_url }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - name: Display Logs
+      env:
+        TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+      run: |
+        TARGET_URL=${{ github.event.target_url }}
+        RUN_ID=${TARGET_URL##*/}
+        LOG_READ_URL=$(curl --silent --header "Authorization: Bearer $TFE_TOKEN" \
+          https://app.terraform.io/api/v2/runs/$RUN_ID/plan | \
+          jq -r '.data.attributes."log-read-url"')
+        curl --silent $LOG_READ_URL
+
+    - name: Create a commit status
+      uses: actions/github-script@v4
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          const payload = context.payload;
+
+          await github.repos.createCommitStatus({
+            owner,
+            repo,
+            sha: payload.sha,
+            state: payload.state,
+            target_url: `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`,
+            context: payload.context.replace('Terraform Cloud', 'GitHub Action'),
+            description: payload.description,
+          });

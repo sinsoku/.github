@@ -1,0 +1,8 @@
+{
+  "name": "Terraform Cloud Logs",
+  "description": "Display logs executed in Terraform Cloud.",
+  "iconName": "flask",
+  "categories": [
+    "HCL"
+  ]
+}
